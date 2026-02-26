@@ -1,7 +1,5 @@
 # MIMIC-IV Clinical AI Triage Pipeline 🏥 ⚡
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_svg.svg)](https://mimic-triage-validator.streamlit.app/)
-
 An automated end-to-end data interoperability pipeline that triages emergency department data using the MIMIC-IV-ED dataset.
 
 ## 🚀 Live Demo
