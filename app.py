@@ -1,88 +1,74 @@
 import streamlit as st
 import pandas as pd
 
-# 1. Page Configuration
-st.set_page_config(page_title="MIMIC-IV Triage Command Center", layout="wide", initial_sidebar_state="collapsed")
+# 1. Page Config
+st.set_page_config(page_title="ED Command Center", layout="wide")
 
-# Custom CSS for the "Command Center" look
+# Updated CSS for better readability
 st.markdown("""
     <style>
-    [data-testid="stMetricValue"] { font-size: 40px; color: #ff4b4b; }
-    .stDataFrame { border: 1px solid #31333F; border-radius: 10px; }
+    [data-testid="stMetricValue"] { font-size: 38px; font-weight: 700; }
+    /* Soften the red alert color for readability */
+    .stDataFrame [data-testid="stTable"] { font-family: sans-serif; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🚨 Emergency Department Triage Monitor")
-st.caption("Real-time High-Acuity Filtering | Source: MIMIC-IV-ED")
+st.title("🚨 ED Triage Command Center")
+st.caption("MIMIC-IV Real-time High-Acuity Monitor")
 
 # 2. Data Ingestion
 URL = "https://raw.githubusercontent.com/stephspaulding/clinical-data-interop-pipeline/refs/heads/main/triage.csv"
 
 try:
-    df = pd.read_csv(
-        URL, 
-        sep=',', 
-        quotechar='"', 
-        on_bad_lines='skip', 
-        engine='python'
-    )
-    
-    # Standardize column names to lowercase and remove spaces
+    df = pd.read_csv(URL, sep=',', quotechar='"', on_bad_lines='skip', engine='python')
     df.columns = df.columns.str.strip().str.lower()
-    
-    # Ensure acuity and vitals are numeric
     df['acuity'] = pd.to_numeric(df['acuity'], errors='coerce')
     df['heartrate'] = pd.to_numeric(df['heartrate'], errors='coerce')
-
-    # Filter for High Priority
+    
+    # --- CLINICAL SORTING LOGIC ---
+    # 1. Acuity (1 first)
+    # 2. Heart rate (Highest first - indicates distress)
+    df = df.sort_values(by=['acuity', 'heartrate'], ascending=[True, False])
+    
     high_priority = df[df['acuity'] <= 2].copy()
-
 except Exception as e:
-    st.error(f"⚠️ Pipeline Error: {e}")
+    st.error(f"Sync Error: {e}")
     st.stop()
 
-# 3. Top-Level Metrics
+# 3. Clinical Metrics
 col1, col2, col3, col4 = st.columns(4)
-with col1:
-    st.metric("Critical Alerts", len(high_priority))
-with col2:
-    percent_critical = (len(high_priority) / len(df)) * 100 if len(df) > 0 else 0
-    st.metric("Acuity Load", f"{percent_critical:.1f}%")
-with col3:
-    avg_hr = high_priority['heartrate'].mean()
-    st.metric("Avg HR (Critical)", f"{int(avg_hr) if not pd.isna(avg_hr) else 0} bpm")
-with col4:
-    st.metric("System Status", "Live", delta="Active")
+col1.metric("Critical Alerts", len(high_priority))
+col2.metric("Acuity Load", f"{(len(high_priority)/len(df)*100):.1f}%")
+col3.metric("Avg HR (Critical)", f"{int(high_priority['heartrate'].mean())} bpm")
+col4.metric("System Status", "Live", delta="Active")
 
 st.divider()
 
-# 4. Interactive Display
+# 4. Refined View
 left_col, right_col = st.columns([2, 1])
 
-# Define columns once, globally, to avoid NameErrors
-target_cols = ['subject_id', 'acuity', 'chiefcomplaint', 'heartrate', 'temperature', 'resprate']
-
 with left_col:
-    st.subheader("🔥 Immediate Intervention Queue")
+    st.subheader("🔥 Immediate Attention Required")
     
-    def highlight_vitals(s):
-        # Apply red background if Heart Rate > 100
-        return ['background-color: #701c1c' if (not pd.isna(s.heartrate) and s.heartrate > 100) else '' for _ in s]
+    def style_critical(res):
+        # Using a softer red (#ffcccc) with black text for better contrast
+        # Only highlight if Acuity is 1 AND Heartrate is high
+        color = 'background-color: #ffcccc; color: black; font-weight: bold;'
+        default = ''
+        return [color if (res.acuity == 1 or res.heartrate > 100) else default for _ in res]
 
-    # Use the target_cols we defined above
-    if not high_priority.empty:
-        st.dataframe(
-            high_priority[target_cols].style.apply(highlight_vitals, axis=1),
-            use_container_width=True,
-            hide_index=True
-        )
-    else:
-        st.write("No high-acuity patients detected.")
+    target_cols = ['subject_id', 'acuity', 'chiefcomplaint', 'heartrate', 'temperature', 'resprate']
+    
+    st.dataframe(
+        high_priority[target_cols].style.apply(style_critical, axis=1),
+        use_container_width=True,
+        hide_index=True
+    )
 
 with right_col:
-    st.subheader("Chief Complaint Trends")
-    if not high_priority.empty:
-        complaint_counts = high_priority['chiefcomplaint'].value_counts().head(10)
-        st.bar_chart(complaint_counts, horizontal=True)
+    st.subheader("Top Chief Complaints")
+    # Sorted descending as requested
+    complaint_counts = high_priority['chiefcomplaint'].value_counts().sort_values(ascending=True).tail(10)
+    st.bar_chart(complaint_counts, horizontal=True)
 
-st.info("💡 **Clinical Note:** Rows highlighted in red indicate Tachycardia (HR > 100) within the High-Acuity subset.")
+st.info("💡 **Triage Logic:** Patients are sorted by Acuity (1-2) and descending Heart Rate. Red highlight indicates clinical instability.")
