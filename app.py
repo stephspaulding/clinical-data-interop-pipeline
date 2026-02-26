@@ -60,15 +60,25 @@ with left_col:
     target_cols = ['subject_id', 'acuity', 'chiefcomplaint', 'heartrate', 'temperature', 'resprate']
     
     st.dataframe(
-        high_priority[target_cols].style.apply(style_critical, axis=1),
-        use_container_width=True,
-        hide_index=True
-    )
+    high_priority[target_cols].style.apply(style_critical, axis=1).format({
+        'acuity': '{:.0f}',
+        'heartrate': '{:.0f}',
+        'temperature': '{:.1f}',
+        'resprate': '{:.0f}'
+    }),
+    use_container_width=True,
+    hide_index=True
+)
 
 with right_col:
     st.subheader("Top Chief Complaints")
-    # Sorted descending as requested
-    complaint_counts = high_priority['chiefcomplaint'].value_counts().sort_values(ascending=True).tail(10)
-    st.bar_chart(complaint_counts, horizontal=True)
-
+    
+    # 1. Get counts
+    counts = high_priority['chiefcomplaint'].value_counts().head(10)
+    
+    # 2. Sort ASCENDING here so the chart renders DESCENDING (highest at top)
+    counts = counts.sort_values(ascending=True)
+    
+    # 3. Plot
+    st.bar_chart(counts, horizontal=True)
 st.info("💡 **Triage Logic:** Patients are sorted by Acuity (1-2) and descending Heart Rate. Red highlight indicates clinical instability.")
