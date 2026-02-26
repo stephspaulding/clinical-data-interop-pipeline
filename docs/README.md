@@ -8,10 +8,12 @@ An automated end-to-end data interoperability pipeline that triages emergency de
 ## 🛠️ System Overview
 This project automates the ingestion of clinical CSV data, processes it through a serverless Python logic engine (Pipedream), and identifies high-acuity patients for immediate clinical intervention.
 
-### Key Documentation:
-- [🏗️ Architecture & Data Flow](docs/architecture.md)
-- [🧬 API Spec & FHIR Mapping](docs/api_spec.md)
-- [🩺 Clinical Logic & Triage Rules](docs/clinical_logic.md)
+### 📖 Key Documentation
+| Resource | Description |
+| :--- | :--- |
+| [🏗️ Architecture & Data Flow](./docs/architecture.md) | High-level system design and serverless pipeline orchestration. |
+| [🧬 API Spec & FHIR Mapping](./docs/api_spec.md) | Technical schema and crosswalk to HL7 FHIR R4 standards. |
+| [🩺 Clinical Logic & Triage Rules](./docs/clinical_logic.md) | Rules for patient prioritization and clinical decision support (CDS). |
 
 ## 🛠️ Tech Stack
 - **Data Source:** MIMIC-IV-ED (Clinical Database)
