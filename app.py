@@ -16,27 +16,27 @@ st.title("🚨 Emergency Department Triage Monitor")
 st.caption("Real-time High-Acuity Filtering | Source: MIMIC-IV-ED")
 
 # 2. Data Ingestion
-URL = "https://raw.githubusercontent.com/stephspaulding/clinical-data-interop-pipeline/refs/heads/main/app.py"
-df = pd.read_csv(URL)
-df['acuity'] = pd.to_numeric(df['acuity'], errors='coerce')
+URL = "https://raw.githubusercontent.com/stephspaulding/clinical-data-interop-pipeline/refs/heads/main/triage.csv"
 
-# Logic for High Priority
-high_priority = df[df['acuity'] <= 2].copy()
+try:
+    # ADDED: Robust CSV parsing for clinical strings
+    df = pd.read_csv(
+        URL, 
+        sep=',', 
+        quotechar='"', 
+        on_bad_lines='skip', 
+        engine='python'
+    )
+    
+    # Standardize column names (strips hidden spaces/casing)
+    df.columns = df.columns.str.strip().str.lower()
+    
+    # Convert acuity to numeric
+    df['acuity'] = pd.to_numeric(df['acuity'], errors='coerce')
 
-# 3. Top-Level Metrics
-col1, col2, col3, col4 = st.columns(4)
-with col1:
-    st.metric("Critical Alerts", len(high_priority))
-with col2:
-    percent_critical = (len(high_priority) / len(df)) * 100 if len(df) > 0 else 0
-    st.metric("Acuity Load", f"{percent_critical:.1f}%")
-with col3:
-    avg_hr = high_priority['heartrate'].mean()
-    st.metric("Avg HR (Critical)", f"{int(avg_hr) if not pd.isna(avg_hr) else 0} bpm")
-with col4:
-    st.metric("System Status", "Live", delta="Active")
-
-st.divider()
+except Exception as e:
+    st.error(f"⚠️ Pipeline Error: Could not parse clinical data. Details: {e}")
+    st.stop()
 
 # 4. Interactive Display
 left_col, right_col = st.columns([2, 1])
